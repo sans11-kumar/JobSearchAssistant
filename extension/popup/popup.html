@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Search Assistant</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Job Search Assistant</h1>
+    
+    <div id="resume-section">
+      <h2>Your Resume</h2>
+      <div id="resume-status">
+        <p id="resume-message">No resume uploaded yet.</p>
+        <button id="upload-resume-btn">Upload Resume</button>
+        <input type="file" id="resume-file" accept=".pdf,.docx,.doc" style="display: none;">
+      </div>
+    </div>
+    
+    <div id="job-section">
+      <h2>Job Posting</h2>
+      <div id="job-status">
+        <p id="job-message">Checking for job posting...</p>
+      </div>
+    </div>
+    
+    <div id="manual-input-section" style="display: none;">
+      <h3>Enter Job URL Manually</h3>
+      <div class="input-group">
+        <input type="text" id="job-url-input" placeholder="https://example.com/job-posting">
+        <button id="fetch-job-btn">Fetch Job</button>
+      </div>
+    </div>
+    
+    <div id="analysis-section" style="display: none;">
+      <h2>Resume Analysis</h2>
+      <button id="analyze-btn">Analyze Match</button>
+      
+      <div id="analysis-results" style="display: none;">
+        <div class="match-score">
+          <h3>Match Score</h3>
+          <div class="score-circle">
+            <span id="match-percentage">0%</span>
+          </div>
+        </div>
+        
+        <div class="findings">
+          <h3>Key Findings</h3>
+          <ul id="key-findings-list"></ul>
+        </div>
+        
+        <div class="missing-keywords">
+          <h3>Missing Keywords</h3>
+          <div id="keywords-container"></div>
+        </div>
+        
+        <div class="suggestions">
+          <h3>Suggestions</h3>
+          <ul id="suggestions-list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html> 

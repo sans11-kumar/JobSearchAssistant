@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Job Search Assistant",
+  "version": "1.0",
+  "description": "Helps job seekers optimize their resumes for ATS by comparing against job postings",
+  "action": {
+    "default_popup": "popup/popup.html"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:5000/*"
+  ],
+  "background": {
+    "service_worker": "scripts/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["scripts/content.js"]
+    }
+  ]
+} 
