@@ -15,31 +15,61 @@ def parse_resume():
     """
     Endpoint to parse a resume file and extract relevant information
     """
+    # Validate file presence
     if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
+        return jsonify({'error': 'No file part in request'}), 400
 
     file = request.files['file']
+    
+    # Validate file name and extension
     if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+        return jsonify({'error': 'No file selected'}), 400
+        
+    allowed_extensions = ['pdf', 'doc', 'docx']
+    file_extension = file.filename.split('.')[-1].lower()
+    if file_extension not in allowed_extensions:
+        return jsonify({
+            'error': 'Invalid file type',
+            'allowed_types': allowed_extensions
+        }), 400
+
+    # Validate file size (max 5MB)
+    max_size = 5 * 1024 * 1024
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+    if file_size > max_size:
+        return jsonify({
+            'error': 'File too large',
+            'max_size': f'{max_size} bytes'
+        }), 400
 
     # Save the file temporarily
-    temp_path = str(uuid.uuid4()) + '.' + file.filename.split('.')[-1]
-    file.save(temp_path)
-
+    temp_path = f'temp_{uuid.uuid4()}.{file_extension}'
     try:
+        file.save(temp_path)
+        
         # Parse the resume
         parser = ResumeParser(temp_path)
         resume_data = parser.parse()
-
-        # Clean up
-        os.remove(temp_path)
-
-        return jsonify(resume_data)
+        
+        # Clean up temp file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+            
+        return jsonify({
+            'status': 'success',
+            'data': resume_data
+        })
+        
     except Exception as e:
         # Clean up in case of error
         if os.path.exists(temp_path):
             os.remove(temp_path)
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'error': 'Failed to process resume',
+            'details': str(e)
+        }), 500
 
 @app.route('/api/parse-job', methods=['POST'])
 def parse_job():
