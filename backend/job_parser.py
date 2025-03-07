@@ -10,7 +10,6 @@ nlp = spacy.load('en_core_web_sm')
 class JobParser:
     def __init__(self, job_description):
         self.job_description = job_description
-        self.nlp = spacy.load('en_core_web_sm')
         self.stop_words = set(stopwords.words('english'))
     
     def _extract_requirements(self):
@@ -71,7 +70,7 @@ class JobParser:
         
         # Extract skills based on common keywords
         skills = []
-        doc = self.nlp(self.job_description.lower())
+        doc = nlp(self.job_description.lower())
         
         # Check for skill keywords
         for skill in skill_keywords:
@@ -124,7 +123,7 @@ class JobParser:
                 return match.group(1).strip()
         
         # If no pattern matches, try to extract using NER
-        doc = self.nlp(self.job_description)
+        doc = nlp(self.job_description)
         for ent in doc.ents:
             if ent.label_ == "ORG":
                 return ent.text
@@ -156,126 +155,3 @@ class JobParser:
             "word_frequency": word_freq,
             "full_text": self.job_description
         }
-
-def parse_job_posting(job_text):
-    """Parse job posting text to extract title, requirements, and skills"""
-    # Extract job title
-    title = extract_job_title(job_text)
-    
-    # Extract requirements
-    requirements = extract_requirements(job_text)
-    
-    # Extract skills
-    skills = extract_skills_from_job(job_text)
-    
-    return title, requirements, skills
-
-def extract_job_title(text):
-    """Extract job title from the job posting"""
-    # Look for common job title patterns
-    title_patterns = [
-        r'(?i)job title:?\s*([^\n]+)',
-        r'(?i)position:?\s*([^\n]+)',
-        r'(?i)role:?\s*([^\n]+)'
-    ]
-    
-    for pattern in title_patterns:
-        match = re.search(pattern, text)
-        if match:
-            return match.group(1).strip()
-    
-    # Default to first line or "Unknown Title"
-    first_line = text.split('\n')[0].strip()
-    return first_line if first_line else "Unknown Title"
-
-def extract_requirements(text):
-    """Extract job requirements from the posting"""
-    # Look for common requirement section patterns
-    requirement_patterns = [
-        r'(?i)requirements?:?\s*([^#]+?)(?=\n\s*\n|\n\s*[A-Z]|\Z)',
-        r'(?i)qualifications?:?\s*([^#]+?)(?=\n\s*\n|\n\s*[A-Z]|\Z)',
-        r'(?i)what you\'ll need:?\s*([^#]+?)(?=\n\s*\n|\n\s*[A-Z]|\Z)',
-        r'(?i)skills( required)?:?\s*([^#]+?)(?=\n\s*\n|\n\s*[A-Z]|\Z)'
-    ]
-    
-    requirements = []
-    
-    for pattern in requirement_patterns:
-        matches = re.search(pattern, text)
-        if matches:
-            req_text = matches.group(1).strip()
-            # Split into bullet points if available
-            bullet_items = re.split(r'\n\s*[•\-*]\s*', req_text)
-            for item in bullet_items:
-                if item.strip():
-                    requirements.append(item.strip())
-    
-    # If no structured requirements found, attempt to extract based on keywords
-    if not requirements:
-        sentences = nltk.sent_tokenize(text)
-        for sentence in sentences:
-            if any(keyword in sentence.lower() for keyword in ['experience', 'skill', 'proficiency', 'knowledge', 'degree', 'qualification']):
-                requirements.append(sentence.strip())
-    
-    return requirements
-
-def extract_skills_from_job(text):
-    """Extract skills from job posting text using NLP"""
-    # Common skills and technologies
-    common_skills = {
-        "programming": ["python", "java", "javascript", "c++", "ruby", "php", "swift", "kotlin", "go", "rust", "typescript"],
-        "web": ["html", "css", "react", "angular", "vue", "node.js", "express", "django", "flask", "bootstrap"],
-        "database": ["sql", "mysql", "postgresql", "mongodb", "firebase", "oracle", "nosql", "redis"],
-        "cloud": ["aws", "azure", "gcp", "cloud", "docker", "kubernetes", "serverless"],
-        "data": ["machine learning", "data science", "ai", "artificial intelligence", "data analysis", "big data", "tableau", "power bi"],
-        "tools": ["git", "github", "jira", "agile", "scrum", "ci/cd", "jenkins", "terraform"]
-    }
-    
-    # Soft skills
-    soft_skills = [
-        "communication", "teamwork", "problem solving", "creativity", "adaptability", 
-        "leadership", "time management", "critical thinking", "collaboration", "attention to detail"
-    ]
-    
-    # Combine all skills
-    all_skills = [skill for category in common_skills.values() for skill in category] + soft_skills
-    
-    # Process the text with spaCy
-    doc = nlp(text.lower())
-    
-    # Find skills using regex patterns
-    found_skills = set()
-    
-    for skill in all_skills:
-        pattern = r'\b' + re.escape(skill) + r'\b'
-        if re.search(pattern, text.lower()):
-            found_skills.add(skill)
-    
-    # Look for years of experience
-    experience_patterns = [
-        r'(\d+)\+?\s*(?:years|yrs)(?:\s*of)?\s*experience',
-        r'experience(?:\s*of)?\s*(\d+)\+?\s*(?:years|yrs)'
-    ]
-    
-    for pattern in experience_patterns:
-        matches = re.findall(pattern, text.lower())
-        if matches:
-            for match in matches:
-                found_skills.add(f"{match}+ years experience")
-    
-    # Look for education requirements
-    education_patterns = [
-        r"(?:bachelor'?s|master'?s|phd|doctorate|bs|ms|ba|ma)\s+(?:degree)?",
-        r"degree\s+in\s+([^.,;:]+)"
-    ]
-    
-    for pattern in education_patterns:
-        matches = re.findall(pattern, text.lower())
-        if matches:
-            for match in matches:
-                if isinstance(match, tuple):
-                    found_skills.add(f"education: {match[0]}")
-                else:
-                    found_skills.add(f"education: {match}")
-    
-    return list(found_skills) 

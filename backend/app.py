@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import json
+import uuid
 from resume_parser import ResumeParser
 from job_parser import JobParser
 from ats_analyzer import ATSAnalyzer
@@ -16,23 +17,23 @@ def parse_resume():
     """
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
-    
+
     # Save the file temporarily
-    temp_path = 'temp_resume.' + file.filename.split('.')[-1]
+    temp_path = str(uuid.uuid4()) + '.' + file.filename.split('.')[-1]
     file.save(temp_path)
-    
+
     try:
         # Parse the resume
         parser = ResumeParser(temp_path)
         resume_data = parser.parse()
-        
+
         # Clean up
         os.remove(temp_path)
-        
+
         return jsonify(resume_data)
     except Exception as e:
         # Clean up in case of error
@@ -77,4 +78,4 @@ def analyze_match():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=True)

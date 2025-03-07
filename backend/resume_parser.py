@@ -34,7 +34,6 @@ except Exception as e:
 class ResumeParser:
     def __init__(self, resume_path):
         self.resume_path = resume_path
-        self.nlp = spacy.load('en_core_web_sm')
         self.stop_words = set(stopwords.words('english'))
         self.text = self._extract_text()
         

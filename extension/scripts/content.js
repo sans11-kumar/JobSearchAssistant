@@ -47,34 +47,34 @@ const JOB_SITES = [
 
 // Check if current page is a job posting
 function checkIfJobPosting() {
-  console.log('Checking if page is a job posting...');
+
   
   const pageText = document.body.innerText.toLowerCase();
   const url = window.location.href.toLowerCase();
   
   // Check if URL contains job site domains
   const isJobSite = JOB_SITES.some(site => url.includes(site));
-  console.log('Is job site:', isJobSite);
+
   
   // Check if page contains job keywords
   const matchedKeywords = JOB_KEYWORDS.filter(keyword => 
     pageText.includes(keyword.toLowerCase())
   );
   const keywordCount = matchedKeywords.length;
-  console.log('Matched keywords:', matchedKeywords);
-  console.log('Keyword count:', keywordCount);
+
+
   
   // Consider it a job posting if it's on a job site and has at least 2 keywords
   // or if it's not on a known job site but has at least 4 keywords
   const isJobPosting = (isJobSite && keywordCount >= 2) || keywordCount >= 4;
-  console.log('Is job posting:', isJobPosting);
+
   
   return isJobPosting;
 }
 
 // Extract job description from the page
 function extractJobDescription() {
-  console.log('Extracting job description...');
+
   
   // Get all text from the main content area
   // This is a simple implementation - real-world would need more sophisticated parsing
@@ -97,15 +97,26 @@ function extractJobDescription() {
   for (const container of possibleContainers) {
     if (container) {
       mainContent = container.innerText;
-      console.log('Found container:', container);
       break;
     }
   }
   
-  // If no specific container found, use the body text
+  // If no specific container found, try a more targeted approach
   if (!mainContent) {
-    console.log('No specific container found, using body text');
-    mainContent = document.body.innerText;
+
+    
+    // Get the main element of the page
+    const mainElement = document.querySelector('main') || document.body;
+    
+    // Extract text from all paragraphs within the main element
+    const paragraphs = mainElement.querySelectorAll('p');
+    let extractedText = '';
+    
+    for (const paragraph of paragraphs) {
+      extractedText += paragraph.innerText + '\n';
+    }
+    
+    mainContent = extractedText || document.body.innerText;
   }
   
   return mainContent;
@@ -113,7 +124,7 @@ function extractJobDescription() {
 
 // Extract job title from the page
 function extractJobTitle() {
-  console.log('Extracting job title...');
+
   
   // Try to find job title in common elements
   const possibleTitleElements = [
@@ -129,7 +140,6 @@ function extractJobTitle() {
   // Use the first valid title found
   for (const element of possibleTitleElements) {
     if (element && element.innerText.trim()) {
-      console.log('Found title element:', element);
       return element.innerText.trim();
     }
   }
@@ -139,7 +149,7 @@ function extractJobTitle() {
 
 // Check if the page is a job posting and notify background script
 function detectJobPosting() {
-  console.log('Running job posting detection...');
+
   
   if (checkIfJobPosting()) {
     const jobData = {
@@ -148,7 +158,7 @@ function detectJobPosting() {
       url: window.location.href
     };
     
-    console.log('Job detected:', jobData);
+
     
     // Notify background script
     chrome.runtime.sendMessage({
@@ -164,16 +174,14 @@ function detectJobPosting() {
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('Content script received message:', message);
+
   
   try {
     if (message.action === 'checkJobPosting') {
       const isJobPosting = checkIfJobPosting();
-      console.log('Responding to checkJobPosting:', isJobPosting);
       sendResponse({ isJobPosting: isJobPosting });
     } else if (message.action === 'getJobDescription') {
       const jobDescription = extractJobDescription();
-      console.log('Responding to getJobDescription with length:', jobDescription.length);
       sendResponse({ jobDescription: jobDescription });
     }
   } catch (error) {
@@ -185,12 +193,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Run detection when page loads
-console.log('Content script loaded');
 window.addEventListener('load', () => {
   // Wait a bit for dynamic content to load
-  console.log('Page loaded, waiting for content...');
   setTimeout(detectJobPosting, 1000);
 });
 
 // Also run detection now in case the page is already loaded
-detectJobPosting(); 
+detectJobPosting();
