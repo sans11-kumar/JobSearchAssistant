@@ -9,6 +9,12 @@
 <body>
   <div class="container">
     <h1>Job Search Assistant</h1>
+
+    <div class="form-group">
+      <label for="api-key-input">DeepSeek API Key:</label>
+      <input type="text" id="api-key-input" class="form-control" placeholder="Enter your DeepSeek API key">
+      <button id="save-api-key-btn" class="btn btn-primary">Save API Key</button>
+    </div>
     
     <div id="resume-section">
       <h2>Your Resume</h2>
@@ -44,16 +50,49 @@
           <div class="score-circle">
             <span id="match-percentage">0%</span>
           </div>
+          <div class="score-details">
+            <div class="score-breakdown">
+              <h4>Score Breakdown</h4>
+              <ul>
+                <li>
+                  <span class="category">Required Skills</span>
+                  <span class="score" id="required-skills-score">0%</span>
+                </li>
+                <li>
+                  <span class="category">Preferred Skills</span>
+                  <span class="score" id="preferred-skills-score">0%</span>
+                </li>
+                <li>
+                  <span class="category">Experience Match</span>
+                  <span class="score" id="experience-score">0%</span>
+                </li>
+                <li>
+                  <span class="category">Education Match</span>
+                  <span class="score" id="education-score">0%</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div id="keyword-analysis">
+          <div class="keyword-category">
+            <h4>Required Skills</h4>
+            <div class="keywords" id="required-skills"></div>
+          </div>
+          <div class="keyword-category">
+            <h4>Preferred Skills</h4>
+            <div class="keywords" id="preferred-skills"></div>
+          </div>
+          <div class="keyword-category">
+            <h4>Bonus Skills</h4>
+            <div class="keywords" id="bonus-skills"></div>
+          </div>
         </div>
         
         <div class="findings">
           <h3>Key Findings</h3>
           <ul id="key-findings-list"></ul>
-        </div>
-        
-        <div class="missing-keywords">
-          <h3>Missing Keywords</h3>
-          <div id="keywords-container"></div>
         </div>
         
         <div class="suggestions">

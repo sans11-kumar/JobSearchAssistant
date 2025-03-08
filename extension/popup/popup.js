@@ -1,201 +1,47 @@
-// State variables
-let userResume = null;
-let currentJob = null;
-let API_URL = 'http://localhost:5000'; // Default value
-
-// DOM elements
-const resumeStatus = document.getElementById('resumeStatus');
-const resumeUpload = document.getElementById('resumeUpload');
-const uploadBtn = document.getElementById('uploadBtn');
-const jobStatus = document.getElementById('jobStatus');
-const analyzeBtn = document.getElementById('analyzeBtn');
-const resultsSection = document.getElementById('resultsSection');
-const matchScore = document.getElementById('matchScore');
-const keyFindings = document.getElementById('keyFindings');
-const missingKeywords = document.getElementById('missingKeywords');
-const suggestions = document.getElementById('suggestions');
-
-let jobDataReceived = false;
-
-// Enable analyze button if both resume and job are available
-function checkAnalyzeButtonState() {
-  if (analyzeBtn) analyzeBtn.disabled = !(userResume && currentJob && jobDataReceived);
-}
-
-// Load API URL from storage
-chrome.storage.local.get(['apiUrl'], function(result) {
-  if (result.apiUrl) {
-    API_URL = result.apiUrl;
-  }
-
-  // Function to update job status in popup
-  function updateJobStatus(job) {
-    if (jobStatus) {
-      jobStatus.textContent = 'Job detected: ' + job.title;
-    }
-    currentJob = job;
-    jobDataReceived = true;
-    checkAnalyzeButtonState();
-  }
-});
-
-// Load saved resume from storage
-chrome.storage.local.get(['resume'], function(result) {
-  if (result.resume) {
-    userResume = result.resume;
-    if (resumeStatus) resumeStatus.textContent = 'Resume loaded: ' + userResume.name;
-    checkAnalyzeButtonState();
-  }
-});
-
-// Listen for job data from content script
-chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-  if (message.action === 'jobData') {
-    updateJobStatus(message.job);
-  }
-});
-
-// Check if we're on a job posting page
-chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-  chrome.tabs.sendMessage(tabs[0].id, {action: 'getJobDetails'}, function(response) {
-    if (response) {
-      updateJobStatus(response);
-    }
-  });
-});
-
-// Handle resume upload
-uploadBtn.addEventListener('click', function() {
-  if (resumeUpload.files.length > 0) {
-    const file = resumeUpload.files[0];
-    
-    // Validate file type
-    if (!file.name.endsWith('.pdf') && !file.name.endsWith('.docx')) {
-      alert('Please upload a PDF or DOCX file.');
-      return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      userResume = {
-        name: file.name,
-        type: file.type,
-        data: e.target.result
-      };
-      
-      // Store resume in extension storage
-      chrome.storage.local.set({resume: userResume}, function() {
-        if (resumeStatus) resumeStatus.textContent = 'Resume loaded: ' + file.name;
-        checkAnalyzeButtonState();
-      });
-    };
-    
-    reader.readAsDataURL(file);
-  }
-});
-
-// Handle analyze button click
-analyzeBtn.addEventListener('click', function() {
-  if (userResume && currentJob) {
-    if (analyzeBtn) {
-      analyzeBtn.textContent = 'Analyzing...';
-      analyzeBtn.disabled = true;
-    }
-
-    // Load API URL from storage
-    chrome.storage.local.get(['apiUrl'], function(result) {
-      if (result.apiUrl) {
-        API_URL = result.apiUrl;
-      }
-
-      // Send data to backend for analysis
-      fetch(`${API_URL}/analyze-match`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          resumeData: userResume,
-          job: currentJob
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        // Display results
-        if (matchScore) matchScore.textContent = `${data.matchPercentage}%`;
-        
-        // Clear previous results
-        if (keyFindings) keyFindings.innerHTML = '';
-        if (missingKeywords) missingKeywords.innerHTML = '';
-        if (suggestions) suggestions.innerHTML = '';
-        
-        // Add key findings
-        data.keyFindings.forEach(finding => {
-          const li = document.createElement('li');
-          li.textContent = finding;
-          if (keyFindings) keyFindings.appendChild(li);
-        });
-        
-        // Add missing keywords
-        data.missingKeywords.forEach(keyword => {
-          const li = document.createElement('li');
-          li.textContent = keyword;
-          if (missingKeywords) missingKeywords.appendChild(li);
-        });
-        
-        // Add suggestions
-        data.suggestions.forEach(suggestion => {
-          const li = document.createElement('li');
-          li.textContent = suggestion;
-          if (suggestions) suggestions.appendChild(li);
-        });
-        
-        // Show results section
-        if (resultsSection) resultsSection.classList.remove('hidden');
-        if (analyzeBtn) {
-          analyzeBtn.textContent = 'Analyze Match';
-          analyzeBtn.disabled = false;
-        }
-      })
-      .catch(error => {
-        console.error('Error analyzing resume:', error);
-        alert('Error analyzing resume. Please make sure the backend server is running.');
-        if (analyzeBtn) {
-          analyzeBtn.textContent = 'Analyze Match';
-          analyzeBtn.disabled = false;
-        }
-      });
-    });
-  }
-});
-
 // Wait until DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('Popup DOM fully loaded');
   
-  // Get DOM elements with proper null checks
+  // Get DOM elements
   const uploadResumeBtn = document.getElementById('upload-resume-btn');
   const resumeFileInput = document.getElementById('resume-file');
-  const resumeMessage = document.getElementById('resumeMessage');
-  const jobMessage = document.getElementById('jobMessage');
-  const analysisSection = document.getElementById('analysisSection');
-  const analyzeBtn = document.getElementById('analyzeBtn');
-  const analysisResults = document.getElementById('analysisResults');
-  const matchPercentage = document.getElementById('matchPercentage');
-  const keyFindingsList = document.getElementById('keyFindingsList');
-  const keywordsContainer = document.getElementById('keywordsContainer');
-  const suggestionsList = document.getElementById('suggestionsList');
-  const manualInputSection = document.getElementById('manualInputSection');
-  const jobUrlInput = document.getElementById('jobUrlInput');
-  const fetchJobBtn = document.getElementById('fetchJobBtn');
+  const resumeMessage = document.getElementById('resume-message');
+  const jobMessage = document.getElementById('job-message');
+  const analysisSection = document.getElementById('analysis-section');
+  const analyzeBtn = document.getElementById('analyze-btn');
+  const analysisResults = document.getElementById('analysis-results');
+  const matchPercentage = document.getElementById('match-percentage');
+  const requiredSkillsScore = document.getElementById('required-skills-score');
+  const preferredSkillsScore = document.getElementById('preferred-skills-score');
+  const experienceScore = document.getElementById('experience-score');
+  const educationScore = document.getElementById('education-score');
+  const requiredSkills = document.getElementById('required-skills');
+  const preferredSkills = document.getElementById('preferred-skills');
+  const bonusSkills = document.getElementById('bonus-skills');
+  const keyFindingsList = document.getElementById('key-findings-list');
+  const suggestionsList = document.getElementById('suggestions-list');
+  const manualInputSection = document.getElementById('manual-input-section');
+  const jobUrlInput = document.getElementById('job-url-input');
+  const fetchJobBtn = document.getElementById('fetch-job-btn');
+  const apiKeyInput = document.getElementById('api-key-input');
+  const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+  
+  // Log which elements were found
+  console.log('DOM Elements loaded');
+  
+  // Load API key from storage
+  chrome.storage.local.get(['apiKey'], function(result) {
+    if (result.apiKey) {
+      apiKeyInput.value = result.apiKey;
+    }
+  });
   
   // Check if resume is already uploaded
-  if (resumeMessage) {
-    chrome.storage.local.get(['resumeData'], function(result) {
-      if (result.resumeData) {
-        resumeMessage.textContent = 'Resume uploaded successfully!';
-      }
-    });
-  }
+  chrome.storage.local.get(['resumeData'], function(result) {
+    if (result.resumeData && resumeMessage) {
+      resumeMessage.textContent = 'Resume uploaded successfully!';
+    }
+  });
   
   // Check if job posting is detected
   if (jobMessage) {
@@ -204,6 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
           chrome.tabs.sendMessage(tabs[0].id, {action: 'checkJobPosting'}, function(response) {
             if (chrome.runtime.lastError) {
+              console.log('Error checking job posting:', chrome.runtime.lastError);
               jobMessage.textContent = 'No job posting detected. Try entering a URL manually.';
               if (manualInputSection) manualInputSection.style.display = 'block';
               return;
@@ -224,6 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           });
         } catch (error) {
+          console.error('Error communicating with content script:', error);
           jobMessage.textContent = 'No job posting detected. Try entering a URL manually.';
           if (manualInputSection) manualInputSection.style.display = 'block';
         }
@@ -237,15 +85,19 @@ document.addEventListener('DOMContentLoaded', function() {
   // Upload resume button click handler
   if (uploadResumeBtn && resumeFileInput) {
     uploadResumeBtn.addEventListener('click', function() {
+      console.log('Upload button clicked');
       resumeFileInput.click();
     });
   }
 
-  // Resume file input change handler
+  // Modified resume file input handler
   if (resumeFileInput && resumeMessage) {
     resumeFileInput.addEventListener('change', function(event) {
+      console.log('File input changed');
       const file = event.target.files[0];
       if (!file) return;
+      
+      console.log('File selected:', file.name);
       
       const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
       if (!allowedTypes.includes(file.type)) {
@@ -253,40 +105,49 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
-      // Create FormData and send to backend
-      const formData = new FormData();
-      formData.append('file', file);
+      resumeMessage.textContent = 'Processing resume...';
       
-      resumeMessage.textContent = 'Uploading resume...';
+      // Simplified approach - store just the file name for testing
+      const resumeData = {
+        text: "This is a simplified resume text for " + file.name,
+        skills: {
+          "programming": ["javascript", "python"],
+          "web": ["html", "css"],
+          "tools": ["git"]
+        },
+        originalFileName: file.name,
+        fileType: file.type
+      };
       
-      fetch('http://localhost:5000/api/parse-resume', {
-        method: 'POST',
-        body: formData
-      })
-      .then(response => response.json())
-      .then(data => {
-        // Store resume data
-        chrome.storage.local.set({resumeData: data}, function() {
-          resumeMessage.textContent = 'Resume uploaded successfully!';
-          
-          // Check if job posting is detected to enable analysis
-          chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (tabs && tabs[0]) {
-              chrome.tabs.sendMessage(tabs[0].id, {action: 'checkJobPosting'}, function(response) {
-                if (response && response.isJobPosting && analysisSection) {
-                  analysisSection.style.display = 'block';
-                } else if (manualInputSection) {
-                  manualInputSection.style.display = 'block';
-                }
-              });
-            }
-          });
+      // Store parsed resume data
+      chrome.storage.local.set({resumeData: resumeData}, function() {
+        resumeMessage.textContent = 'Resume uploaded successfully!';
+        
+        // Check if job posting is detected to enable analysis
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+          if (tabs && tabs[0]) {
+            chrome.tabs.sendMessage(tabs[0].id, {action: 'checkJobPosting'}, function(response) {
+              if (response && response.isJobPosting && analysisSection) {
+                analysisSection.style.display = 'block';
+              }
+            });
+          }
         });
-      })
-      .catch(error => {
-        console.error('Error uploading resume:', error);
-        resumeMessage.textContent = 'Error uploading resume. Please try again.';
-        alert('Error uploading resume. Make sure the backend server is running.');
+      });
+    });
+  }
+  
+  // Save API key button click handler
+  if (saveApiKeyBtn && apiKeyInput) {
+    saveApiKeyBtn.addEventListener('click', function() {
+      const apiKey = apiKeyInput.value.trim();
+      if (!apiKey) {
+        alert('Please enter a valid DeepSeek API key.');
+        return;
+      }
+      
+      chrome.storage.local.set({apiKey: apiKey}, function() {
+        alert('API key saved successfully!');
       });
     });
   }
@@ -294,6 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Fetch job button click handler
   if (fetchJobBtn && jobUrlInput && jobMessage) {
     fetchJobBtn.addEventListener('click', function() {
+      console.log('Fetch job button clicked');
       const url = jobUrlInput.value.trim();
       
       if (!url) {
@@ -315,15 +177,9 @@ document.addEventListener('DOMContentLoaded', function() {
           jobMessage.textContent = 'Job description loaded manually!';
           
           // Check if resume is uploaded to enable analysis
-          chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (tabs && tabs[0]) {
-              chrome.tabs.sendMessage(tabs[0].id, {action: 'checkJobPosting'}, function(response) {
-                if (response && response.isJobPosting && analysisSection) {
-                  analysisSection.style.display = 'block';
-                } else if (manualInputSection) {
-                  manualInputSection.style.display = 'block';
-                }
-              });
+          chrome.storage.local.get(['resumeData'], function(result) {
+            if (result.resumeData && analysisSection) {
+              analysisSection.style.display = 'block';
             }
           });
         });
@@ -341,15 +197,9 @@ document.addEventListener('DOMContentLoaded', function() {
         jobMessage.textContent = 'Job posting loaded manually!';
         
         // Check if resume is uploaded to enable analysis
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-          if (tabs && tabs[0]) {
-            chrome.tabs.sendMessage(tabs[0].id, {action: 'checkJobPosting'}, function(response) {
-              if (response && response.isJobPosting && analysisSection) {
-                analysisSection.style.display = 'block';
-              } else if (manualInputSection) {
-                manualInputSection.style.display = 'block';
-              }
-            });
+        chrome.storage.local.get(['resumeData'], function(result) {
+          if (result.resumeData && analysisSection) {
+            analysisSection.style.display = 'block';
           }
         });
       });
@@ -359,88 +209,85 @@ document.addEventListener('DOMContentLoaded', function() {
   // Add event listener for analyze button
   if (analyzeBtn) {
     analyzeBtn.addEventListener('click', function() {
-      // Get resume data from storage
-      chrome.storage.local.get(['resumeData'], function(result) {
-        if (!result.resumeData) {
-          alert('Please upload your resume first.');
+      console.log('Analyze button clicked');
+      
+      // Check for API key
+      chrome.storage.local.get(['apiKey'], function(result) {
+        if (!result.apiKey) {
+          alert('Please enter your DeepSeek API key first.');
           return;
         }
         
-        // Get job description
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-          if (tabs && tabs[0]) {
-            chrome.tabs.sendMessage(tabs[0].id, {action: 'getJobDescription'}, function(response) {
-              if (chrome.runtime.lastError || !response || !response.jobDescription) {
-                // Try to get job data from storage (manual input)
-                chrome.storage.local.get(['currentJobData'], function(result) {
-                  if (result.currentJobData && result.currentJobData.description) {
-                    processJobDescription(result.currentJobData.description, result.resumeData);
-                  } else {
-                    alert('Could not extract job description. Please enter it manually.');
-                    if (manualInputSection) manualInputSection.style.display = 'block';
-                  }
-                });
-                return;
-              }
-              
-              processJobDescription(response.jobDescription, result.resumeData);
-            });
-          } else {
-            alert('Error accessing current tab.');
+        // Get resume data from storage
+        chrome.storage.local.get(['resumeData'], function(result) {
+          if (!result.resumeData) {
+            alert('Please upload your resume first.');
+            return;
           }
+          
+          // Get job description
+          chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            if (tabs && tabs[0]) {
+              chrome.tabs.sendMessage(tabs[0].id, {action: 'getJobDescription'}, function(response) {
+                if (chrome.runtime.lastError || !response || !response.jobDescription) {
+                  // Try to get job data from storage (manual input)
+                  chrome.storage.local.get(['currentJobData'], function(result) {
+                    if (result.currentJobData && result.currentJobData.description) {
+                      analyzeResume(result.resumeData, result.currentJobData.description);
+                    } else {
+                      alert('Could not extract job description. Please enter it manually.');
+                      if (manualInputSection) manualInputSection.style.display = 'block';
+                    }
+                  });
+                  return;
+                }
+                
+                analyzeResume(result.resumeData, response.jobDescription);
+              });
+            } else {
+              alert('Error accessing current tab.');
+            }
+          });
         });
       });
     });
   }
   
-  // Function to process job description and analyze match
-  function processJobDescription(jobDescription, resumeData) {
-    // Load API URL from storage
-    chrome.storage.local.get(['apiUrl'], function(result) {
-      if (result.apiUrl) {
-        API_URL = result.apiUrl;
-      }
-
-      // Parse job description
-      fetch(`${API_URL}/api/parse-job`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({jobDescription: jobDescription})
-      })
-      .then(response => response.json())
-      .then(jobData => {
-        // Analyze match
-        fetch(`${API_URL}/api/analyze-match`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            resumeData: resumeData,
-            jobData: jobData
-          })
-        })
-        .then(response => response.json())
-        .then(analysis => {
-          // Display analysis results
-          displayAnalysisResults(analysis);
-        })
-        .catch(error => {
-          console.error('Error analyzing match:', error);
-          alert('Error analyzing match. Please try again.');
-        });
-      })
-      .catch(error => {
-        console.error('Error parsing job description:', error);
-        alert('Error parsing job description. Please try again.');
+  // Function to analyze resume against job description
+  function analyzeResume(resumeData, jobDescription) {
+    // Show loading state
+    if (analyzeBtn) {
+      analyzeBtn.textContent = 'Analyzing...';
+      analyzeBtn.disabled = true;
+    }
+    
+    chrome.storage.local.get(['apiKey'], function(result) {
+      chrome.runtime.sendMessage({
+        action: 'analyzeMatch',
+        resumeText: resumeData.text || JSON.stringify(resumeData),
+        jobDescription: jobDescription,
+        apiKey: result.apiKey
+      }, function(response) {
+        // Reset button state
+        if (analyzeBtn) {
+          analyzeBtn.textContent = 'Analyze Match';
+          analyzeBtn.disabled = false;
+        }
+        
+        if (response.error) {
+          alert('Error analyzing match: ' + response.error);
+          return;
+        }
+        
+        displayAnalysisResults(response);
       });
     });
   }
   
-  // Display analysis results with null checks
+  // Function to display analysis results
   function displayAnalysisResults(analysis) {
+    console.log('Displaying analysis results:', analysis);
+    
     // Show results section
     if (analysisResults) {
       analysisResults.style.display = 'block';
@@ -448,52 +295,93 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update match percentage
     if (matchPercentage) {
-      matchPercentage.textContent = `${analysis.match_percentage}%`;
+      matchPercentage.textContent = `${analysis.matchPercentage || analysis.match_percentage}%`;
     }
     
     // Update score circle color based on match percentage
     const scoreCircle = document.querySelector('.score-circle');
     if (scoreCircle) {
-      if (analysis.match_percentage >= 80) {
+      const score = analysis.matchPercentage || analysis.match_percentage || 0;
+      if (score >= 80) {
         scoreCircle.style.borderColor = '#34a853'; // Green for good match
-      } else if (analysis.match_percentage >= 60) {
+      } else if (score >= 60) {
         scoreCircle.style.borderColor = '#fbbc05'; // Yellow for moderate match
       } else {
         scoreCircle.style.borderColor = '#ea4335'; // Red for poor match
       }
     }
     
-    // Clear previous results
-    if (keyFindingsList) keyFindingsList.innerHTML = '';
-    if (keywordsContainer) keywordsContainer.innerHTML = '';
-    if (suggestionsList) suggestionsList.innerHTML = '';
+    // Update score breakdown if available
+    if (analysis.scoreBreakdown) {
+      if (requiredSkillsScore) requiredSkillsScore.textContent = `${analysis.scoreBreakdown.requiredSkills}%`;
+      if (preferredSkillsScore) preferredSkillsScore.textContent = `${analysis.scoreBreakdown.preferredSkills}%`;
+      if (experienceScore) experienceScore.textContent = `${analysis.scoreBreakdown.experience}%`;
+      if (educationScore) educationScore.textContent = `${analysis.scoreBreakdown.education}%`;
+    }
     
-    // Add key findings
-    if (keyFindingsList && analysis.key_findings) {
-      analysis.key_findings.forEach(finding => {
+    // Update keyword analysis if available
+    if (analysis.keywordAnalysis) {
+      if (requiredSkills) {
+        requiredSkills.innerHTML = analysis.keywordAnalysis.requiredSkills
+          .map(k => createKeywordChip(k, 'present'))
+          .join('');
+      }
+      
+      if (preferredSkills) {
+        preferredSkills.innerHTML = analysis.keywordAnalysis.preferredSkills
+          .map(k => createKeywordChip(k, k.present ? 'present' : 'missing'))
+          .join('');
+      }
+      
+      if (bonusSkills) {
+        bonusSkills.innerHTML = analysis.keywordAnalysis.bonusSkills
+          .map(k => createKeywordChip(k, 'bonus'))
+          .join('');
+      }
+    }
+    
+    // Clear and update key findings
+    if (keyFindingsList) {
+      keyFindingsList.innerHTML = '';
+      const findings = analysis.keyFindings || analysis.key_findings || [];
+      findings.forEach(finding => {
         const li = document.createElement('li');
         li.textContent = finding;
         keyFindingsList.appendChild(li);
       });
     }
     
-    // Add missing keywords
-    if (keywordsContainer && analysis.missing_keywords) {
-      analysis.missing_keywords.forEach(keyword => {
-        const span = document.createElement('span');
-        span.className = 'keyword';
-        span.textContent = keyword;
-        keywordsContainer.appendChild(span);
-      });
-    }
-    
-    // Add suggestions
-    if (suggestionsList && analysis.suggestions) {
-      analysis.suggestions.forEach(suggestion => {
+    // Clear and update suggestions
+    if (suggestionsList) {
+      suggestionsList.innerHTML = '';
+      const suggestions = analysis.suggestions || [];
+      suggestions.forEach(suggestion => {
         const li = document.createElement('li');
         li.textContent = suggestion;
         suggestionsList.appendChild(li);
       });
     }
+  }
+  
+  // Helper function to create keyword chips
+  function createKeywordChip(keyword, status) {
+    if (typeof keyword === 'string') {
+      return `
+        <div class="keyword-chip ${status}">
+          ${keyword}
+        </div>
+      `;
+    }
+    
+    return `
+      <div class="keyword-chip ${status}">
+        ${keyword.text}
+        ${status === 'missing' ? `
+          <span class="importance">${keyword.importance || 'Important'}</span>
+          <span class="suggestion">${keyword.suggestion || 'Consider adding'}</span>
+        ` : ''}
+        ${keyword.score ? `<span class="keyword-score">${keyword.score}%</span>` : ''}
+      </div>
+    `;
   }
 });

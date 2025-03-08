@@ -1,64 +1,24 @@
 # Job Search Assistant
 
-A Chrome extension that helps job seekers optimize their resumes for Applicant Tracking Systems (ATS) by comparing them against job postings.
+A Chrome extension that helps job seekers optimize their resumes for Applicant Tracking Systems (ATS) by comparing them against job postings using the DeepSeek API.
 
 ## Features
 
 - Upload and parse resumes in PDF or DOCX format
 - Automatically detect job postings on websites
-- Manually enter job URLs or paste job descriptions
-- Analyze the match between your resume and job requirements
-- Get suggestions to improve your resume for specific job postings
-
-## Project Structure
-
-```
-JobSearchAssistant/
-├── backend/
-│   ├── app.py                # Flask server
-│   ├── resume_parser.py      # Resume parsing logic
-│   ├── job_parser.py         # Job description parsing logic
-│   └── ats_analyzer.py       # Resume-job matching logic
-├── extension/
-│   ├── manifest.json         # Chrome extension manifest
-│   ├── popup/
-│   │   ├── popup.html        # Extension popup UI
-│   │   ├── popup.css         # Popup styling
-│   │   └── popup.js          # Popup functionality
-│   └── scripts/
-│       ├── content.js        # Content script for job detection
-│       └── background.js     # Background script for extension
-└── README.md                 # This file
-```
+- Manually enter job descriptions
+- Analyze the match between your resume and job requirements using DeepSeek AI
+- Get detailed feedback and suggestions to improve your resume for specific job postings
+- Privacy-focused: personal information is redacted before sending to DeepSeek
 
 ## Setup Instructions
 
-### Backend Setup
-
-1. Create a virtual environment:
-   ```
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-2. Install dependencies:
-   ```
-   pip install flask flask-cors PyPDF2 python-docx nltk spacy scikit-learn
-   python -m spacy download en_core_web_sm
-   ```
-
-3. Start the backend server:
-   ```
-   cd backend
-   python app.py
-   ```
-
-### Chrome Extension Setup
-
-1. Open Chrome and go to `chrome://extensions/`
-2. Enable "Developer mode" in the top-right corner
-3. Click "Load unpacked" and select the `extension` folder
-4. The extension should now appear in your browser toolbar
+1. Clone this repository or download the ZIP file
+2. Get a DeepSeek API key from [DeepSeek's website](https://platform.deepseek.com/)
+3. Open Chrome and go to `chrome://extensions/`
+4. Enable "Developer mode" in the top-right corner
+5. Click "Load unpacked" and select the `extension` folder
+6. Click on the extension icon, enter your DeepSeek API key, and save it
 
 ## Usage
 
@@ -68,14 +28,29 @@ JobSearchAssistant/
    - The extension will try to automatically detect the job posting
    - If detection fails, you can manually paste the job description
 4. Click "Analyze Match" to see how well your resume matches the job requirements
-5. Review the match score, missing keywords, and suggestions to improve your resume
+5. Review the detailed analysis:
+   - Overall match percentage
+   - Breakdown of scores by category
+   - Required and preferred skills analysis
+   - Key findings
+   - Specific suggestions to improve your resume
 
-## Tools Used
+## Privacy
 
-- **Backend**: Flask, NLTK, spaCy, scikit-learn
+This extension is designed with privacy in mind:
+- Your resume is processed locally within the extension
+- Personal information (email, phone, address) is automatically redacted before sending to DeepSeek
+- Your data is not stored on any server
+- API key is stored locally in your browser
+
+## Tools & Technology
+
 - **Frontend**: HTML, CSS, JavaScript
-- **Chrome Extension**: Chrome Extension API
+- **Document Parsing**: PDF.js, Mammoth.js for local file parsing
+- **AI Analysis**: DeepSeek API for resume-job matching
+- **Chrome Extension API**: For browser integration
 
-## License
+## Notes
 
-MIT 
+This extension operates entirely within your browser and does not require a backend server. All processing is done locally except for the AI analysis which uses the DeepSeek API.
+

@@ -3,20 +3,38 @@ from flask_cors import CORS
 import os
 import json
 import uuid
+import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 from resume_parser import ResumeParser
-from job_parser import JobParser
-from ats_analyzer import ATSAnalyzer
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    logger.info("Health check request received")
+    return jsonify({
+        'status': 'healthy'
+    }), 200
 
 @app.route('/api/parse-resume', methods=['POST'])
 def parse_resume():
     """
     Endpoint to parse a resume file and extract relevant information
     """
+    logger.info("Resume parse request received")
+    
     # Validate file presence
     if 'file' not in request.files:
+        logger.warning("No file part in request")
         return jsonify({'error': 'No file part in request'}), 400
 
     file = request.files['file']
@@ -71,41 +89,6 @@ def parse_resume():
             'details': str(e)
         }), 500
 
-@app.route('/api/parse-job', methods=['POST'])
-def parse_job():
-    """
-    Endpoint to parse a job description and extract relevant information
-    """
-    data = request.json
-    if not data or 'jobDescription' not in data:
-        return jsonify({'error': 'No job description provided'}), 400
-    
-    try:
-        # Parse the job description
-        parser = JobParser(data['jobDescription'])
-        job_data = parser.parse()
-        
-        return jsonify(job_data)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/analyze-match', methods=['POST'])
-def analyze_match():
-    """
-    Endpoint to analyze the match between a resume and job description
-    """
-    data = request.json
-    if not data or 'resumeData' not in data or 'jobData' not in data:
-        return jsonify({'error': 'Missing resume or job data'}), 400
-    
-    try:
-        # Analyze the match
-        analyzer = ATSAnalyzer()
-        analysis = analyzer.analyze(data['resumeData'], data['jobData'])
-        
-        return jsonify(analysis)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

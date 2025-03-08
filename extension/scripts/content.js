@@ -183,6 +183,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else if (message.action === 'getJobDescription') {
       const jobDescription = extractJobDescription();
       sendResponse({ jobDescription: jobDescription });
+    } else if (message.action === 'parseResume') {
+      // Handle resume file upload
+      const file = message.file;
+      const reader = new FileReader();
+      
+      reader.onload = function(e) {
+        const text = e.target.result;
+        chrome.runtime.sendMessage({
+          action: 'parseResume',
+          resumeText: text
+        }, response => {
+          sendResponse(response);
+        });
+      };
+      
+      reader.readAsText(file);
+      return true; // Required for async sendResponse
     }
   } catch (error) {
     console.error('Error in content script:', error);
